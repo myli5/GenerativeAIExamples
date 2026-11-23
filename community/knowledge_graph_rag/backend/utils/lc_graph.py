@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from utils.nvidia_llm import ChatNVIDIA  # patched 2026: reasoning off
 import concurrent.futures
 import os
 from tqdm import tqdm

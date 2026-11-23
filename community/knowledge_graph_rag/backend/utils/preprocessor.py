@@ -17,7 +17,7 @@ import getpass
 import os
 import json
 import ast
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from utils.nvidia_llm import ChatNVIDIA, strip_fences  # patched 2026: reasoning off
 from langchain.prompts import PromptTemplate
 
 if not os.environ.get("NVIDIA_API_KEY", "").startswith("nvapi-"):
@@ -29,7 +29,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 def process_response(triplets_str):
-    triplets_list = ast.literal_eval(triplets_str)
+    triplets_list = ast.literal_eval(strip_fences(triplets_str))  # patched 2026: strip ``` fences
     json_triplets = []
     
     for triplet in triplets_list:

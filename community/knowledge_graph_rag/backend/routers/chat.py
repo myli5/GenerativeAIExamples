@@ -18,7 +18,7 @@ import json
 import networkx as nx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from utils.nvidia_llm import ChatNVIDIA, live_chat_models, strip_fences  # patched 2026: reasoning off + live model list
 from langchain.chains import GraphQAChain
 from vectorstore.search import SearchHandler
 from langchain_core.output_parsers import StrOutputParser
@@ -44,8 +44,8 @@ KG_GRAPHML_PATH = os.path.join(DATA_DIR, "knowledge_graph.graphml")
 # Define an endpoint to get available models
 @router.get("/get-models/")
 async def get_models():
-    models = ChatNVIDIA.get_available_models()
-    available_models = [model.id for model in models if model.model_type == "chat" and "instruct" in model.id]
+    # patched 2026: 0.1.2's get_available_models() is a stale 2024 table; list live chat models instead
+    available_models = live_chat_models()
     return {"models": available_models}
 
 # Define an endpoint for the chat interface
@@ -89,7 +89,7 @@ async def chat_endpoint(request: ChatRequest):
     
         try:
             entity_string = llm.invoke("""Return a JSON with a single key 'entities' and list of entities within this user query. Each element in your list MUST BE part of the user's query. Do not provide any explanation. If the returned list is not parseable in Python, you will be heavily penalized. For example, input: 'What is the difference between Apple and Google?' output: ['Apple', 'Google']. Always follow this output format. Here's the user query: """ + user_input)
-            entities = json.loads(entity_string.content)['entities']
+            entities = json.loads(strip_fences(entity_string.content))['entities']  # patched 2026: strip ``` fences
             res = search_handler.search_and_rerank(user_input, k=5)
             context = "Here are the relevant passages from the knowledge base: \n\n" + "\n".join(item.text for item in res)
             all_triplets = []

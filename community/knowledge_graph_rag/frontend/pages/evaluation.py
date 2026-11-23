@@ -58,7 +58,7 @@ with st.sidebar:
     llm_selectbox = st.selectbox("Choose an LLM", available_models, index=available_models.index("mistralai/mixtral-8x7b-instruct-v0.1") if "mistralai/mixtral-8x7b-instruct-v0.1" in available_models else 0)
     st.write("You selected: ", llm_selectbox)
 
-    num_data = st.slider("How many Q&A pairs to generate?", 10, 100, 50, step=10)
+    num_data = st.slider("How many Q&A pairs to generate?", 1, 100, 5, step=1)  # patched 2026: allow a small demo run (was 10..100, default 50)
 
 def has_pdf_files(directory):
     for file in os.listdir(directory):
@@ -225,7 +225,7 @@ def app():
                     )
                 elif eval_select == "RAGAS":
                     st.write("evaluating with " + eval_select)
-                    st.write("Evaluations will be done using: Llama3-70b-instruct LLM and nv-embed-v1 embedding model")
+                    st.write("Evaluations will be done using: nemotron-3.5-super-vl-120b-a12b LLM and nemotron-3.5-embed-1b embedding model")  # patched 2026: Llama3-70b-instruct and nv-embed-v1 are retired
                     SCORE_FILE = "combined_results_with_scores_RAGAS.csv"
                     score_response = requests.post(
                         f"{BACKEND_URL}/evaluation/run-scoring-RAGAS/",
@@ -234,7 +234,7 @@ def app():
                     )
                 elif eval_select == "LLM-AS-A-JUDGE":
                     st.write("evaluating with " + eval_select)
-                    st.write("llama3-70b-instruct will be used as Judge")
+                    st.write("nemotron-3.5-super-vl-120b-a12b will be used as Judge")  # patched 2026: llama3-70b-instruct is retired
                     SCORE_FILE = "combined_results_with_scores_LLM-AS-A-JUDGE.csv"
                     score_response = requests.post(
                         f"{BACKEND_URL}/evaluation/run-scoring_llm_as_a_judge/",
