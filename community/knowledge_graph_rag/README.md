@@ -58,7 +58,69 @@ graph LR
 
 This architecture shows how the user query is processed through both the Milvus Vector DB for traditional retrieval and the Knowledge Graph with cuGraph for multi-hop search. The results from both are then used to augment the prompt sent to the NVIDIA AI Playground backend.
 
-## Setup Steps
+## 2026 Update: Running This Example Today
+
+The setup steps below date from mid-2024. In November 2026 the example no longer ran as written: its hosted models were retired, its pinned packages no longer install, and two parsing steps broke with newer models. This fork contains the fixes. It was tested end to end on 2026-11-23 (Python 3.12, Milvus 2.6.27, NVIDIA GB10 / aarch64): 5 arXiv papers → 898 chunks → 3,853 triples → a graph of 3,197 entities.
+
+### What changed and why
+
+| Problem | Fix |
+|---|---|
+| The models the code names are retired (HTTP 410/404): `mistralai/mixtral-8x7b-instruct-v0.1`, `meta/llama3-70b-instruct`, `nvidia/nemotron-4-340b-instruct`, `nvidia/nemotron-4-340b-reward`, `nvidia/nv-embed-v1` | New `backend/utils/nvidia_llm.py`: default model `nvidia/nemotron-3.5-super-vl-120b-a12b`; RAGAS embeddings use `nvidia/nemotron-3.5-embed-1b` |
+| The UI's model list comes from `langchain-nvidia-ai-endpoints` 0.1.2's built-in 2024 table (16 dead models), and the `"instruct" in model.id` filter matches almost nothing today | `live_chat_models()` lists the live API catalog's chat models, default first |
+| Today's Nemotron models "think" first: with `max_tokens=1024`, the reasoning used up the budget and `content` came back empty (0/20 test chunks parsed) | `ChatNVIDIA` subclass sends `chat_template_kwargs={"enable_thinking": False}` (20/20 parsed, ~0.95 s per chunk) |
+| Models often wrap JSON or Python lists in Markdown code fences, so `json.loads` / `ast.literal_eval` fail (the chat page then silently drops all graph context) | `strip_fences()` before parsing triples and entity lists |
+| `requirements.txt` no longer installs on Python 3.12 (numpy 1.24 has no wheels; several imported packages are missing) | `requirements-2026.txt`; each change is explained in its header |
+| `python server.py` crashes (`TypeError ... loop_factory`, ragas' nest_asyncio vs current uvicorn) | Start the backend with the `uvicorn` CLI |
+| The upload page sometimes shows "Received invalid progress data." and the progress bar stops (the backend rewrites `progress.txt` while the frontend reads it) | `update_progress` writes a temporary file and renames it atomically |
+| The Q&A slider on the Evaluation page starts at 10 | It now starts at 1 |
+
+The Nemotron-4 340B reward model has no hosted successor. On the Evaluation page the "Nemotron" scoring therefore fails with 410, while LLM-as-a-judge and RAGAS run with the substitute models above. The results chart further down is the original authors' published result.
+
+### Quick start (2026)
+
+```bash
+git clone https://github.com/myli5/GenerativeAIExamples.git && cd GenerativeAIExamples/community/knowledge_graph_rag
+
+# API key: load it from a private file rather than typing it into a shared or recorded terminal
+export NVIDIA_API_KEY="nvapi-..."
+
+# Python environment (uv is fast; plain venv + pip also works)
+uv venv --python 3.12 .venv && source .venv/bin/activate
+uv pip install -r requirements-2026.txt
+chmod -R go-w .venv          # NLTK refuses group-writable data folders
+
+# Milvus standalone, ports bound to localhost
+docker compose -f milvus-standalone-local.yml up -d
+curl -s http://localhost:9091/healthz      # -> OK
+
+# .env (DATA_DIR must be an absolute path)
+mkdir -p backend/data
+printf "DATA_DIR=$PWD/backend/data\nBACKEND_URL=http://localhost:8000\n" > .env
+
+# Papers to build the graph from (any folder of PDFs inside backend/ works)
+python backend/utils/download_papers.py -s 'abs:"knowledge graph" AND abs:"retrieval-augmented generation"' -sd 2024-05-24 -ed 2024-05-31 -n 5 -d backend/papers
+
+# Terminal 1: backend
+cd backend && uvicorn server:app --host 127.0.0.1 --port 8000
+# Terminal 2: frontend
+cd frontend && streamlit run ui.py
+```
+
+If port 8000 is taken, run uvicorn on another port and set `BACKEND_URL` to match. In the UI, pick the model, select the `papers` folder and click **Process Documents**. Then use the chat page with **Use knowledge graph** ticked, and the visualization page to open `backend/data/knowledge_graph.graphml` in Gephi Lite.
+
+The README mentions cuGraph, but the code builds and queries the graph with plain NetworkX. `backend/utils/cugraph_bench.py` runs the same NetworkX calls with the nx-cugraph GPU backend. On a GB10 with nx-cugraph-cu13 26.10, the top-5 rankings were identical and the speed-ups were:
+
+| Graph | PageRank | Betweenness centrality |
+|---|---|---|
+| Our graph (3,197 nodes) | ×1.7 | ×366 |
+| Synthetic graph (2M edges) | ×76 | ×194 |
+
+Known limitations that remain:
+- **Duplicate entities.** The extracted graph keeps entities that differ only in case (for example "DepsRAG" and "DEPSRAG").
+- **Exact-name lookup.** Graph lookup in the chat matches entity names exactly, so a query can get zero triples even though the graph holds the facts.
+
+## Setup Steps (original, 2024)
 
 Follow these steps to get the chatbot up and running in less than 5 minutes:
 

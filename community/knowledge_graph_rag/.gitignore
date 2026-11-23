@@ -1,0 +1,9 @@
+# local run artifacts
+.env
+.venv/
+venv/
+backend/data/
+backend/papers/
+backend/progress.txt
+backend/progress.txt.tmp
+volumes/

@@ -1,0 +1,31 @@
+# What actually installs and runs on 2026-11-22 (Python 3.12.13, aarch64 GB10). Upstream requirements.txt + changes:
+#   numpy==1.24.1      -> numpy<2 (1.26.4): langchain 0.2.6 needs numpy>=1.26 on Python 3.12; 1.24 has no 3.12 wheels
+#   + pyarrow<20       streamlit 1.30 imports pyarrow; pyarrow 26 needs NumPy 2 ("pyarrow requires NumPy 2.0 or newer")
+#   + setuptools<81    pymilvus 2.4.3 imports pkg_resources (removed from setuptools >= 81)
+#   + FlagEmbedding>=1.3.3, peft   pymilvus[model] (milvus-model 0.2.12) pip-installs these at runtime (fails in a uv venv)
+#   + transformers<5   FlagEmbedding 1.4.2 imports transformers.modeling_attn_mask_utils (gone in transformers 5)
+#   + fastapi uvicorn datasets ragas   imported by the code, missing from requirements.txt (python-dotenv, openai come in transitively)
+arxiv==2.1.0
+langchain==0.2.6
+langchain_community==0.2.6
+langchain_core==0.2.10
+langchain_nvidia_ai_endpoints==0.1.2
+llama_index==0.10.50
+networkx==3.2.1
+numpy<2
+pandas==2.2.2
+pymilvus==2.4.3
+Requests==2.31.0
+streamlit==1.30.0
+unstructured[all-docs]
+tqdm==4.66.1
+pymilvus[model]==2.4.3
+fastapi
+uvicorn
+datasets
+ragas
+pyarrow<20
+setuptools<81
+FlagEmbedding>=1.3.3
+peft
+transformers<5

@@ -21,7 +21,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from utils.lc_graph import process_documents, save_triples_to_csvs
 from vectorstore.search import SearchHandler
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from utils.nvidia_llm import ChatNVIDIA, live_chat_models  # patched 2026: reasoning off + live model list
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -39,8 +39,8 @@ class DirectoryRequest(BaseModel):
 # Define an endpoint to get available models
 @router.get("/get-models/")
 async def get_models():
-    models = ChatNVIDIA.get_available_models()
-    available_models = [model.id for model in models if model.model_type == "chat" and "instruct" in model.id]
+    # patched 2026: 0.1.2's get_available_models() is a stale 2024 table; list live chat models instead
+    available_models = live_chat_models()
     return {"models": available_models}
 
 # Define an endpoint to process documents
@@ -57,8 +57,12 @@ async def process_documents_endpoint(request: DirectoryRequest, background_tasks
 
     def update_progress(completed_futures, total_futures):
         progress = completed_futures / total_futures
-        with open(progress_file, "w") as f:
+        # Write to a temporary file and rename it: open(..., "w") empties progress.txt for a moment, and the
+        # frontend's poll could read "" there (float("") -> "Received invalid progress data.", bar stops).
+        tmp_file = progress_file + ".tmp"
+        with open(tmp_file, "w") as f:
             f.write(str(progress))
+        os.replace(tmp_file, progress_file)
     # Define a background task for processing documents
     def background_task():
         documents, results = process_documents(directory, llm, update_progress=update_progress)

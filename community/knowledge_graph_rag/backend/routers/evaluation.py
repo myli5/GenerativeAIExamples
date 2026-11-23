@@ -21,7 +21,8 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from concurrent.futures import ThreadPoolExecutor
-from langchain_nvidia_ai_endpoints import ChatNVIDIA, NVIDIAEmbeddings
+from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
+from utils.nvidia_llm import ChatNVIDIA, live_chat_models, DEFAULT_MODEL, strip_fences  # patched 2026: reasoning off + live model list
 from langchain.chains import GraphQAChain, LLMChain
 from vectorstore.search import SearchHandler
 from langchain_core.output_parsers import StrOutputParser
@@ -73,8 +74,8 @@ reward_client = OpenAI(
 )
 @router.get("/get-models/")
 async def get_models():
-    models = ChatNVIDIA.get_available_models()
-    available_models = [model.id for model in models if model.model_type == "chat" and "instruct" in model.id]
+    # patched 2026: 0.1.2's get_available_models() is a stale 2024 table; list live chat models instead
+    available_models = live_chat_models()
     return {"models": available_models}
 
 def load_data(input_dir, num_workers):
@@ -149,7 +150,7 @@ def get_graph_RAG_response(question, llm):
     graph = NetworkxEntityGraph(G)
 
     try:
-        entities = json.loads(entity_string.content)['entities']
+        entities = json.loads(strip_fences(entity_string.content))['entities']  # patched 2026: strip ``` fences
         context = ""
         all_triplets = []
         for entity in entities:
@@ -173,7 +174,7 @@ def get_combined_RAG_response(question, llm):
     graph = NetworkxEntityGraph(G)
 
     try:
-        entities = json.loads(entity_string.content)['entities']
+        entities = json.loads(strip_fences(entity_string.content))['entities']  # patched 2026: strip ``` fences
         search_handler = SearchHandler("hybrid_demo3", use_bge_m3=True, use_reranker=True)
         res = search_handler.search_and_rerank(question, k=5)
         context = "Here are the relevant passages from the knowledge base: \n\n" + "\n".join(item.text for item in res)
@@ -351,8 +352,9 @@ async def run_scoring_RAGAS(request: ScoreRequest):
     combined_results = request.combined_results
     
     # RAGAS evaluation uses your own LLM and embeddings model
-    llm = ChatNVIDIA( model="meta/llama3-70b-instruct", temperature=0.2, max_tokens=300,)
-    embeddings = NVIDIAEmbeddings(model="nvidia/nv-embed-v1")
+    # patched 2026: meta/llama3-70b-instruct (404) and nvidia/nv-embed-v1 (410 Gone) are retired
+    llm = ChatNVIDIA( model=DEFAULT_MODEL, temperature=0.2, max_tokens=300,)
+    embeddings = NVIDIAEmbeddings(model="nvidia/nemotron-3.5-embed-1b")
     llm = LangchainLLMWrapper(langchain_llm=llm)
     embeddings = LangchainEmbeddingsWrapper(embeddings)
 
@@ -408,7 +410,8 @@ async def run_scoring_llm_as_a_judge(request: ScoreRequest):
     combined_results = request.combined_results
     
     #
-    llm = ChatNVIDIA( model="meta/llama3-70b-instruct", temperature=0.2, max_tokens=300,)
+    # patched 2026: meta/llama3-70b-instruct is retired (404)
+    llm = ChatNVIDIA( model=DEFAULT_MODEL, temperature=0.2, max_tokens=300,)
     
     
     QA_PROMPT = judge_prompt_template()
