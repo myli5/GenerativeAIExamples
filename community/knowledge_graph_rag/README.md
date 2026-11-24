@@ -77,7 +77,7 @@ The setup steps below date from mid-2024. In November 2026 the example no longer
 
 The Nemotron-4 340B reward model has no hosted successor. On the Evaluation page the "Nemotron" scoring therefore fails with 410, while LLM-as-a-judge and RAGAS run with the substitute models above. The results chart further down is the original authors' published result.
 
-### Quick start (2026)
+### Quick start 
 
 ```bash
 git clone https://github.com/myli5/GenerativeAIExamples.git && cd GenerativeAIExamples/community/knowledge_graph_rag
