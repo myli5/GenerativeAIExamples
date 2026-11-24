@@ -70,7 +70,7 @@ The setup steps below date from mid-2024. In November 2026 the example no longer
 | The UI's model list comes from `langchain-nvidia-ai-endpoints` 0.1.2's built-in 2024 table (16 dead models), and the `"instruct" in model.id` filter matches almost nothing today | `live_chat_models()` lists the live API catalog's chat models, default first |
 | Today's Nemotron models "think" first: with `max_tokens=1024`, the reasoning used up the budget and `content` came back empty (0/20 test chunks parsed) | `ChatNVIDIA` subclass sends `chat_template_kwargs={"enable_thinking": False}` (20/20 parsed, ~0.95 s per chunk) |
 | Models often wrap JSON or Python lists in Markdown code fences, so `json.loads` / `ast.literal_eval` fail (the chat page then silently drops all graph context) | `strip_fences()` before parsing triples and entity lists |
-| `requirements.txt` no longer installs on Python 3.12 (numpy 1.24 has no wheels; several imported packages are missing) | `requirements-2026.txt`; each change is explained in its header |
+| The 2024 `requirements.txt` pins (now `requirements_unwanted.txt`) no longer install on Python 3.12 (numpy 1.24 has no wheels; several imported packages are missing) | `requirements.txt` now holds pins that install on Python 3.12; each change is explained in its header |
 | `python server.py` crashes (`TypeError ... loop_factory`, ragas' nest_asyncio vs current uvicorn) | Start the backend with the `uvicorn` CLI |
 | The upload page sometimes shows "Received invalid progress data." and the progress bar stops (the backend rewrites `progress.txt` while the frontend reads it) | `update_progress` writes a temporary file and renames it atomically |
 | The Q&A slider on the Evaluation page starts at 10 | It now starts at 1 |
@@ -87,7 +87,7 @@ export NVIDIA_API_KEY="nvapi-..."
 
 # Python environment (uv is fast; plain venv + pip also works)
 uv venv --python 3.12 .venv && source .venv/bin/activate
-uv pip install -r requirements-2026.txt
+uv pip install -r requirements.txt
 chmod -R go-w .venv          # NLTK refuses group-writable data folders
 
 # Milvus standalone, ports bound to localhost
