@@ -120,7 +120,7 @@ Known limitations that remain:
 - **Duplicate entities.** The extracted graph keeps entities that differ only in case (for example "DepsRAG" and "DEPSRAG").
 - **Exact-name lookup.** Graph lookup in the chat matches entity names exactly, so a query can get zero triples even though the graph holds the facts.
 
-## Setup Steps (original, 2024)
+## Setup Steps 
 
 Follow these steps to get the chatbot up and running in less than 5 minutes:
 
